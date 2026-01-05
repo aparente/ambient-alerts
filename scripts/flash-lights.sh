@@ -1,6 +1,6 @@
 #!/bin/bash
 # ambient-alerts: Alert on permission request
-# Supports multiple styles: flash, pulse, solid, subtle
+# Supports multiple styles: flash, pulse, solid, subtle, breathe
 
 CONFIG_FILE="${HOME}/.claude/ambient-alerts.json"
 
@@ -44,10 +44,15 @@ if [[ "$BACKEND" == "openhue" ]]; then
       FLASH_DURATION=$(jq -r '.styles.flash.flash_duration_ms // 120' "$CONFIG_FILE")
       FLASH_SEC=$(echo "scale=3; $FLASH_DURATION / 1000" | bc)
 
+      # Get original color to flash back to
+      ORIG_X=$(jq -r '.HueData.color.xy.x // 0.4' "$STATE_FILE" 2>/dev/null)
+      ORIG_Y=$(jq -r '.HueData.color.xy.y // 0.4' "$STATE_FILE" 2>/dev/null)
+      ORIG_BRIGHTNESS=$(jq -r '.HueData.dimming.brightness // 60' "$STATE_FILE" 2>/dev/null)
+
       for ((i=1; i<=FLASH_COUNT; i++)); do
         openhue set light "$LIGHT_NAME" --on -b "$FLASH_BRIGHTNESS" --color "$FLASH_COLOR" 2>/dev/null
         sleep "$FLASH_SEC"
-        openhue set light "$LIGHT_NAME" --on -b 30 --color coral 2>/dev/null
+        openhue set light "$LIGHT_NAME" --on -b "$ORIG_BRIGHTNESS" --xy "$ORIG_X,$ORIG_Y" 2>/dev/null
         sleep "$FLASH_SEC"
       done
       ;;
@@ -80,6 +85,29 @@ if [[ "$BACKEND" == "openhue" ]]; then
       CURRENT_BRIGHTNESS=$(jq -r '.HueData.dimming.brightness // 60' "$STATE_FILE" 2>/dev/null)
       NEW_BRIGHTNESS=$(echo "$CURRENT_BRIGHTNESS * (100 - $DIM_PERCENT) / 100" | bc)
       openhue set light "$LIGHT_NAME" --on -b "$NEW_BRIGHTNESS" 2>/dev/null
+      ;;
+
+    breathe)
+      # Breathe: pulse brightness while keeping current color
+      MIN_BRIGHTNESS=$(jq -r '.styles.breathe.min_brightness // 30' "$CONFIG_FILE")
+      MAX_BRIGHTNESS=$(jq -r '.styles.breathe.max_brightness // 90' "$CONFIG_FILE")
+      BREATH_DURATION=$(jq -r '.styles.breathe.breath_duration_ms // 800' "$CONFIG_FILE")
+      BREATH_COUNT=$(jq -r '.styles.breathe.breath_count // 3' "$CONFIG_FILE")
+      BREATH_SEC=$(echo "scale=3; $BREATH_DURATION / 1000" | bc)
+
+      # Get current color coordinates from saved state
+      COLOR_X=$(jq -r '.HueData.color.xy.x // 0.4' "$STATE_FILE" 2>/dev/null)
+      COLOR_Y=$(jq -r '.HueData.color.xy.y // 0.4' "$STATE_FILE" 2>/dev/null)
+
+      # Breathe: dim -> bright -> dim for each breath
+      for ((i=1; i<=BREATH_COUNT; i++)); do
+        openhue set light "$LIGHT_NAME" --on -b "$MIN_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
+        sleep "$BREATH_SEC"
+        openhue set light "$LIGHT_NAME" --on -b "$MAX_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
+        sleep "$BREATH_SEC"
+      done
+      # End on dim before restore
+      openhue set light "$LIGHT_NAME" --on -b "$MIN_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
       ;;
   esac
 

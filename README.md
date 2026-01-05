@@ -4,7 +4,7 @@ A Claude Code plugin that uses your smart lights for ambient notifications. Get 
 
 ## Features
 
-- **Multiple alert styles** - flash, pulse, solid, or subtle
+- **Multiple alert styles** - flash, pulse, breathe, solid, or subtle
 - **Vibe-based setup** - tell Claude what you want and it configures for you
 - **Works with any smart light** - Philips Hue (via OpenHue) or custom commands
 - **Session-isolated** - multiple Claude sessions don't interfere
@@ -16,6 +16,7 @@ A Claude Code plugin that uses your smart lights for ambient notifications. Get 
 |-------|------|----------|
 | ⚡ **Flash** | Urgent, can't miss it | Important permission requests |
 | 🌊 **Pulse** | Calm awareness | Subtle but noticeable |
+| 🫁 **Breathe** | Keep the vibe | Non-disruptive, uses current color |
 | 💡 **Solid** | Minimal | Just a color change |
 | 🌙 **Subtle** | Zen mode | Deep focus, peripheral only |
 
@@ -92,6 +93,28 @@ Create `~/.claude/ambient-alerts.json`:
 }
 ```
 
+**Breathe style (non-disruptive):**
+```json
+{
+  "backend": "openhue",
+  "light_name": "TV",
+  "alert_style": "breathe",
+  "styles": {
+    "breathe": {
+      "use_current_color": true,
+      "min_brightness": 30,
+      "max_brightness": 90,
+      "breath_duration_ms": 800,
+      "breath_count": 3
+    }
+  },
+  "waiting_state": {
+    "enabled": false
+  },
+  "restore_on_complete": true
+}
+```
+
 **Subtle style (minimal):**
 ```json
 {
@@ -139,7 +162,7 @@ For non-Hue systems (LIFX, Govee, Home Assistant, etc.):
 |--------|------|-------------|
 | `backend` | string | `"openhue"` or `"custom"` |
 | `light_name` | string | Name of your light (OpenHue) |
-| `alert_style` | string | `"flash"`, `"pulse"`, `"solid"`, `"subtle"` |
+| `alert_style` | string | `"flash"`, `"pulse"`, `"breathe"`, `"solid"`, `"subtle"` |
 | `waiting_state.enabled` | boolean | Stay on waiting color until complete |
 | `waiting_state.color` | string | Color while waiting |
 | `waiting_state.brightness` | number | Brightness while waiting (0-100) |
@@ -166,6 +189,15 @@ For non-Hue systems (LIFX, Govee, Home Assistant, etc.):
 |--------|---------|-------------|
 | `solid_color` | `"powder_blue"` | Color to change to |
 | `solid_brightness` | `60` | Brightness |
+
+### Breathe Style Options
+| Option | Default | Description |
+|--------|---------|-------------|
+| `use_current_color` | `true` | Keep the light's current color |
+| `min_brightness` | `30` | Minimum brightness during breath |
+| `max_brightness` | `90` | Maximum brightness during breath |
+| `breath_duration_ms` | `800` | Duration of each breath phase |
+| `breath_count` | `3` | Number of breath cycles |
 
 ### Subtle Style Options
 | Option | Default | Description |
