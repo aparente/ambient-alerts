@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "ambient-alerts",
-      "source": ".",
+      "source": "./",
       "description": "Flash smart lights on permission requests, restore when complete",
       "version": "1.0.0",
       "author": {
