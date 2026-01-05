@@ -1,0 +1,11 @@
+{
+  "name": "ambient-alerts",
+  "version": "1.0.0",
+  "description": "Flash smart lights on permission requests, restore when complete. Works with Philips Hue (via OpenHue) or any system via custom commands.",
+  "author": {
+    "name": "aparente"
+  },
+  "repository": "https://github.com/aparente/ambient-alerts",
+  "license": "MIT",
+  "keywords": ["hue", "notifications", "smart-home", "ambient", "lights"]
+}

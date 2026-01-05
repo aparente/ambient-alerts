@@ -1,0 +1,7 @@
+{
+  "backend": "custom",
+  "save_state_command": "echo '{\"brightness\": 100}'",
+  "flash_command": "echo 'FLASH!' && sleep 0.5",
+  "waiting_command": "echo 'Waiting for input...'",
+  "restore_command": "echo 'Restored!'"
+}

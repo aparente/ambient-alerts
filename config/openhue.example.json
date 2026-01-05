@@ -1,0 +1,40 @@
+{
+  "backend": "openhue",
+  "light_name": "TV",
+
+  "alert_style": "flash",
+
+  "styles": {
+    "flash": {
+      "description": "Quick attention-grabbing flashes",
+      "flash_color": "cyan",
+      "flash_brightness": 100,
+      "flash_count": 3,
+      "flash_duration_ms": 120
+    },
+    "pulse": {
+      "description": "Gentle breathing effect",
+      "pulse_color": "warm_white",
+      "pulse_min_brightness": 20,
+      "pulse_max_brightness": 80,
+      "pulse_duration_ms": 1000
+    },
+    "solid": {
+      "description": "Simple color change",
+      "solid_color": "powder_blue",
+      "solid_brightness": 60
+    },
+    "subtle": {
+      "description": "Barely noticeable dim",
+      "dim_percent": 20
+    }
+  },
+
+  "waiting_state": {
+    "enabled": true,
+    "color": "powder_blue",
+    "brightness": 50
+  },
+
+  "restore_on_complete": true
+}

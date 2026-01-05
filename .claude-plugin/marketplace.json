@@ -1,0 +1,22 @@
+{
+  "name": "aparente",
+  "owner": {
+    "name": "aparente"
+  },
+  "metadata": {
+    "description": "Smart light notifications for Claude Code"
+  },
+  "plugins": [
+    {
+      "name": "ambient-alerts",
+      "source": ".",
+      "description": "Flash smart lights on permission requests, restore when complete",
+      "version": "1.0.0",
+      "author": {
+        "name": "aparente"
+      },
+      "license": "MIT",
+      "keywords": ["hue", "notifications", "smart-home", "ambient", "lights"]
+    }
+  ]
+}
