@@ -23,6 +23,13 @@ fi
 # Load configuration
 BACKEND=$(jq -r '.backend // "openhue"' "$CONFIG_FILE")
 
+# Kill any continuous pulse process for this session
+PID_FILE="/tmp/ambient-alerts-pulse-${SESSION_ID}.pid"
+if [[ -f "$PID_FILE" ]]; then
+  kill $(cat "$PID_FILE") 2>/dev/null
+  rm -f "$PID_FILE"
+fi
+
 # Restore the lights
 if [[ "$BACKEND" == "openhue" ]]; then
   LIGHT_NAME=$(jq -r '.light_name // "TV"' "$CONFIG_FILE")

@@ -17,7 +17,8 @@ fi
 # Load configuration
 BACKEND=$(jq -r '.backend // "openhue"' "$CONFIG_FILE")
 ALERT_STYLE=$(jq -r '.alert_style // "flash"' "$CONFIG_FILE")
-WAITING_ENABLED=$(jq -r '.waiting_state.enabled // true' "$CONFIG_FILE")
+# Note: jq's // treats false as falsy, so we explicitly check for false
+WAITING_ENABLED=$(jq -r 'if .waiting_state.enabled == false then "false" else "true" end' "$CONFIG_FILE")
 
 # === SAVE CURRENT STATE ===
 if [[ ! -f "$STATE_FILE" ]]; then
@@ -93,21 +94,44 @@ if [[ "$BACKEND" == "openhue" ]]; then
       MAX_BRIGHTNESS=$(jq -r '.styles.breathe.max_brightness // 90' "$CONFIG_FILE")
       BREATH_DURATION=$(jq -r '.styles.breathe.breath_duration_ms // 800' "$CONFIG_FILE")
       BREATH_COUNT=$(jq -r '.styles.breathe.breath_count // 3' "$CONFIG_FILE")
+      CONTINUOUS=$(jq -r '.styles.breathe.continuous // false' "$CONFIG_FILE")
       BREATH_SEC=$(echo "scale=3; $BREATH_DURATION / 1000" | bc)
 
       # Get current color coordinates from saved state
       COLOR_X=$(jq -r '.HueData.color.xy.x // 0.4' "$STATE_FILE" 2>/dev/null)
       COLOR_Y=$(jq -r '.HueData.color.xy.y // 0.4' "$STATE_FILE" 2>/dev/null)
 
-      # Breathe: dim -> bright -> dim for each breath
-      for ((i=1; i<=BREATH_COUNT; i++)); do
+      if [[ "$CONTINUOUS" == "true" ]]; then
+        # Continuous mode: spawn background process that pulses forever
+        PID_FILE="/tmp/ambient-alerts-pulse-${SESSION_ID}.pid"
+
+        # Kill any existing pulse process for this session
+        if [[ -f "$PID_FILE" ]]; then
+          kill $(cat "$PID_FILE") 2>/dev/null
+          rm -f "$PID_FILE"
+        fi
+
+        # Start background pulsing loop
+        (
+          while true; do
+            openhue set light "$LIGHT_NAME" --on -b "$MIN_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
+            sleep "$BREATH_SEC"
+            openhue set light "$LIGHT_NAME" --on -b "$MAX_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
+            sleep "$BREATH_SEC"
+          done
+        ) &
+        echo $! > "$PID_FILE"
+      else
+        # Fixed count mode: pulse N times then stop
+        for ((i=1; i<=BREATH_COUNT; i++)); do
+          openhue set light "$LIGHT_NAME" --on -b "$MIN_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
+          sleep "$BREATH_SEC"
+          openhue set light "$LIGHT_NAME" --on -b "$MAX_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
+          sleep "$BREATH_SEC"
+        done
+        # End on dim before restore
         openhue set light "$LIGHT_NAME" --on -b "$MIN_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
-        sleep "$BREATH_SEC"
-        openhue set light "$LIGHT_NAME" --on -b "$MAX_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
-        sleep "$BREATH_SEC"
-      done
-      # End on dim before restore
-      openhue set light "$LIGHT_NAME" --on -b "$MIN_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
+      fi
       ;;
   esac
 
