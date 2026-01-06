@@ -14,6 +14,9 @@ A Claude Code plugin for ambient light communication. Express states, respond to
 ## Quick Start
 
 ```bash
+# Add the marketplace (first time only)
+claude plugins marketplace add aparente
+
 # Install the plugin
 claude plugins install ambient-alerts@aparente
 
