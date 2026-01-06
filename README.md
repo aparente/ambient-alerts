@@ -14,14 +14,15 @@ A Claude Code plugin for ambient light communication. Express states, respond to
 ## Quick Start
 
 ```bash
-# Add the marketplace (first time only)
-claude plugins marketplace add aparente
+# Install via /plugins command (in Claude Code)
+/plugins install ambient-alerts@aparente
 
-# Install the plugin
+# Or via CLI
+claude plugins marketplace add aparente  # first time only
 claude plugins install ambient-alerts@aparente
 
-# Run interactive setup
-# Just ask Claude: "Set up ambient alerts for my lights"
+# Run interactive setup - just ask Claude:
+# "Set up ambient alerts for my lights"
 ```
 
 ## How It Works
