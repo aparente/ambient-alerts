@@ -1,26 +1,43 @@
 #!/bin/bash
-# ambient-alerts: Alert on permission request
-# Supports multiple styles: flash, pulse, solid, subtle, breathe
+# ambient-alerts: Handle permission request event
+# Now uses the unified state system
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${HOME}/.claude/ambient-alerts.json"
 
-# Read session_id from stdin (hook input is JSON)
+# Read hook input from stdin
 INPUT=$(cat)
 SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // "default"')
-STATE_FILE="/tmp/ambient-alerts-state-${SESSION_ID}.json"
+EVENT_TYPE="PermissionRequest"
 
 # Check if config exists
 if [[ ! -f "$CONFIG_FILE" ]]; then
   exit 0
 fi
 
-# Load configuration
+# Check if we're using the new state-based system
+HAS_STATES=$(jq -r '.states // empty' "$CONFIG_FILE")
+if [[ -n "$HAS_STATES" ]]; then
+  # New system: look up event mapping and call set-state.sh
+  TARGET_STATE=$(jq -r ".events.${EVENT_TYPE} // \"\"" "$CONFIG_FILE")
+
+  if [[ -n "$TARGET_STATE" && "$TARGET_STATE" != "null" ]]; then
+    "$SCRIPT_DIR/set-state.sh" "$TARGET_STATE" --session "$SESSION_ID"
+  fi
+
+  exit 0
+fi
+
+# === LEGACY SYSTEM BELOW ===
+# Kept for backward compatibility with old configs
+
 BACKEND=$(jq -r '.backend // "openhue"' "$CONFIG_FILE")
 ALERT_STYLE=$(jq -r '.alert_style // "flash"' "$CONFIG_FILE")
-# Note: jq's // treats false as falsy, so we explicitly check for false
 WAITING_ENABLED=$(jq -r 'if .waiting_state.enabled == false then "false" else "true" end' "$CONFIG_FILE")
 
-# === SAVE CURRENT STATE ===
+STATE_FILE="/tmp/ambient-alerts-state-${SESSION_ID}.json"
+
+# Save current state
 if [[ ! -f "$STATE_FILE" ]]; then
   if [[ "$BACKEND" == "openhue" ]]; then
     LIGHT_NAME=$(jq -r '.light_name // "TV"' "$CONFIG_FILE")
@@ -33,7 +50,7 @@ if [[ ! -f "$STATE_FILE" ]]; then
   fi
 fi
 
-# === EXECUTE ALERT STYLE ===
+# Execute alert style (legacy)
 if [[ "$BACKEND" == "openhue" ]]; then
   LIGHT_NAME=$(jq -r '.light_name // "TV"' "$CONFIG_FILE")
 
@@ -45,7 +62,6 @@ if [[ "$BACKEND" == "openhue" ]]; then
       FLASH_DURATION=$(jq -r '.styles.flash.flash_duration_ms // 120' "$CONFIG_FILE")
       FLASH_SEC=$(echo "scale=3; $FLASH_DURATION / 1000" | bc)
 
-      # Get original color to flash back to
       ORIG_X=$(jq -r '.HueData.color.xy.x // 0.4' "$STATE_FILE" 2>/dev/null)
       ORIG_Y=$(jq -r '.HueData.color.xy.y // 0.4' "$STATE_FILE" 2>/dev/null)
       ORIG_BRIGHTNESS=$(jq -r '.HueData.dimming.brightness // 60' "$STATE_FILE" 2>/dev/null)
@@ -65,7 +81,6 @@ if [[ "$BACKEND" == "openhue" ]]; then
       PULSE_DURATION=$(jq -r '.styles.pulse.pulse_duration_ms // 1000' "$CONFIG_FILE")
       PULSE_SEC=$(echo "scale=3; $PULSE_DURATION / 1000" | bc)
 
-      # Gentle pulse up and down
       openhue set light "$LIGHT_NAME" --on -b "$PULSE_MIN" --color "$PULSE_COLOR" 2>/dev/null
       sleep "$PULSE_SEC"
       openhue set light "$LIGHT_NAME" --on -b "$PULSE_MAX" --color "$PULSE_COLOR" 2>/dev/null
@@ -82,60 +97,32 @@ if [[ "$BACKEND" == "openhue" ]]; then
 
     subtle)
       DIM_PERCENT=$(jq -r '.styles.subtle.dim_percent // 20' "$CONFIG_FILE")
-      # Get current brightness and dim it
       CURRENT_BRIGHTNESS=$(jq -r '.HueData.dimming.brightness // 60' "$STATE_FILE" 2>/dev/null)
       NEW_BRIGHTNESS=$(echo "$CURRENT_BRIGHTNESS * (100 - $DIM_PERCENT) / 100" | bc)
       openhue set light "$LIGHT_NAME" --on -b "$NEW_BRIGHTNESS" 2>/dev/null
       ;;
 
     breathe)
-      # Breathe: pulse brightness while keeping current color
       MIN_BRIGHTNESS=$(jq -r '.styles.breathe.min_brightness // 30' "$CONFIG_FILE")
       MAX_BRIGHTNESS=$(jq -r '.styles.breathe.max_brightness // 90' "$CONFIG_FILE")
       BREATH_DURATION=$(jq -r '.styles.breathe.breath_duration_ms // 800' "$CONFIG_FILE")
       BREATH_COUNT=$(jq -r '.styles.breathe.breath_count // 3' "$CONFIG_FILE")
-      CONTINUOUS=$(jq -r '.styles.breathe.continuous // false' "$CONFIG_FILE")
       BREATH_SEC=$(echo "scale=3; $BREATH_DURATION / 1000" | bc)
 
-      # Get current color coordinates from saved state
       COLOR_X=$(jq -r '.HueData.color.xy.x // 0.4' "$STATE_FILE" 2>/dev/null)
       COLOR_Y=$(jq -r '.HueData.color.xy.y // 0.4' "$STATE_FILE" 2>/dev/null)
 
-      if [[ "$CONTINUOUS" == "true" ]]; then
-        # Continuous mode: spawn background process that pulses forever
-        PID_FILE="/tmp/ambient-alerts-pulse-${SESSION_ID}.pid"
-
-        # Kill any existing pulse process for this session
-        if [[ -f "$PID_FILE" ]]; then
-          kill $(cat "$PID_FILE") 2>/dev/null
-          rm -f "$PID_FILE"
-        fi
-
-        # Start background pulsing loop
-        (
-          while true; do
-            openhue set light "$LIGHT_NAME" --on -b "$MIN_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
-            sleep "$BREATH_SEC"
-            openhue set light "$LIGHT_NAME" --on -b "$MAX_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
-            sleep "$BREATH_SEC"
-          done
-        ) &
-        echo $! > "$PID_FILE"
-      else
-        # Fixed count mode: pulse N times then stop
-        for ((i=1; i<=BREATH_COUNT; i++)); do
-          openhue set light "$LIGHT_NAME" --on -b "$MIN_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
-          sleep "$BREATH_SEC"
-          openhue set light "$LIGHT_NAME" --on -b "$MAX_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
-          sleep "$BREATH_SEC"
-        done
-        # End on dim before restore
+      for ((i=1; i<=BREATH_COUNT; i++)); do
         openhue set light "$LIGHT_NAME" --on -b "$MIN_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
-      fi
+        sleep "$BREATH_SEC"
+        openhue set light "$LIGHT_NAME" --on -b "$MAX_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
+        sleep "$BREATH_SEC"
+      done
+      openhue set light "$LIGHT_NAME" --on -b "$MIN_BRIGHTNESS" --xy "$COLOR_X,$COLOR_Y" 2>/dev/null
       ;;
   esac
 
-  # === SET WAITING STATE ===
+  # Set waiting state (legacy)
   if [[ "$WAITING_ENABLED" == "true" && "$ALERT_STYLE" != "solid" ]]; then
     WAITING_COLOR=$(jq -r '.waiting_state.color // "powder_blue"' "$CONFIG_FILE")
     WAITING_BRIGHTNESS=$(jq -r '.waiting_state.brightness // 50' "$CONFIG_FILE")
@@ -143,7 +130,6 @@ if [[ "$BACKEND" == "openhue" ]]; then
   fi
 
 elif [[ "$BACKEND" == "custom" ]]; then
-  # Custom backend - run user-provided commands
   ALERT_CMD=$(jq -r '.alert_command // ""' "$CONFIG_FILE")
   WAITING_CMD=$(jq -r '.waiting_command // ""' "$CONFIG_FILE")
 

@@ -1,159 +1,273 @@
 # ambient-alerts Setup Skill
 
-This skill guides users through setting up ambient-alerts with their preferred smart light system and notification style.
+A collaborative, playful interview to design your ambient light communication system with Claude.
 
 ## Invocation
 
 Use this skill when:
 - User runs `/ambient-setup` or `/setup-ambient-alerts`
 - User asks to "set up ambient alerts" or "configure light notifications"
+- User wants to "customize how Claude communicates through lights"
 - User installs the ambient-alerts plugin and needs configuration
 
-## Interview Flow
+## The Vibe
 
-### Step 1: Smart Light System
+This isn't a form to fill out - it's a conversation about how we'll communicate. Be curious, playful, and collaborative. Demo things live. Adjust based on reactions. The goal is to co-create a visual language that feels right.
 
-Ask the user what smart light system they use:
+---
 
-**Questions to ask:**
-- "What smart light system do you use? (Philips Hue, LIFX, Govee, Home Assistant, other)"
-- If Hue: "Do you have OpenHue CLI installed? (Run `openhue --version` to check)"
-- If other: "What command-line tool or API do you use to control your lights?"
+## Phase 1: Getting to Know Your Setup
 
-**Based on response, set `backend`:**
-- Philips Hue with OpenHue → `"openhue"`
-- Anything else → `"custom"` (will need custom commands)
+### Light System Discovery
 
-### Step 2: Light Selection
-
-For OpenHue users:
-- Run `openhue get light` to list available lights
-- Ask: "Which light should I use for notifications?"
-- Set `light_name` to their choice
-
-For custom users:
-- Ask: "What command saves your light's current state?"
-- Ask: "What command restores the light to a saved state?"
-
-### Step 3: Vibe Selection
-
-Present the ambient interaction styles:
+Start with genuine curiosity:
 
 ```
-What vibe are you going for?
-
-1. ⚡ FLASH - Quick, attention-grabbing pulses
-   Best for: When you really can't miss a notification
-
-2. 🌊 PULSE - Gentle breathing effect
-   Best for: Subtle but noticeable, calming
-
-3. 💡 SOLID - Simple color change
-   Best for: Minimal distraction, just a color shift
-
-4. 🌙 SUBTLE - Barely noticeable dim
-   Best for: Deep focus mode, peripheral awareness only
+"Hey! I'd love to set up a way to communicate with you through your lights.
+What smart light system do you have? (Philips Hue, LIFX, Home Assistant, something else?)"
 ```
 
-Set `alert_style` based on their choice.
+If Hue, verify OpenHue:
+```
+"Nice! Let me check if OpenHue CLI is set up..."
+*runs `openhue get lights`*
+"Found your lights! Which one should be 'mine' for our communication?"
+```
 
-### Step 4: Color Preferences
+Show them the options with personality:
+```
+"I see you have:
+- Pitcher (a Bloom - compact, great for desk presence)
+- TV (lightstrip - dramatic but might annoy anyone watching)
+- Signe floor lamps (fancy! very visible)
 
-Based on their chosen style, ask about colors:
+Which one feels right for this?"
+```
 
-**For flash:**
-- "What color should the flash be? (cyan, red, magenta, white, etc.)"
-- Default: cyan (high visibility, distinct from most ambient lighting)
+---
 
-**For pulse:**
-- "What color should the pulse be?"
-- Default: warm_white (calming)
+## Phase 2: Automatic Events
 
-**For solid:**
-- "What color indicates 'waiting for input'?"
-- Default: powder_blue (calm but distinct)
+### Explain with Examples
 
-### Step 5: Waiting State
+```
+"First, let's set up what happens automatically - things I don't choose,
+they just happen based on what's going on.
 
-Ask: "Should the light stay a different color while waiting for your response, or just flash and return to normal?"
+The big one: when I need your permission to do something.
+Should the light grab your attention, or just... softly suggest?"
+```
+
+### Permission Requests
+
+Demo options live:
+```
+*sets light to bright gold*
+"This is 'HEY I NEED YOU' mode - bright gold, can't miss it"
+
+*sets light to softer amber*
+"This is 'when you have a moment' - noticeable but chill"
+
+*dims slightly*
+"Or I could be super subtle - just a hint in your peripheral vision"
+
+"What feels right?"
+```
+
+Iterate based on feedback:
+```
+User: "The gold but less intense"
+*adjusts to 60%*
+"How about this?"
+```
+
+### Completion & Errors
+
+```
+"When I finish something successfully, should I flash a little 'done!' or just... quietly return to normal?"
+```
+
+```
+"What about when something goes wrong? I'm thinking a warm coral -
+noticeable but not alarming. Not angry red, more like 'hey, heads up'"
+*demos coral*
+"Too much? Too little?"
+```
+
+### The Room-Matching Option
+
+If they want minimal idle presence:
+```
+"Here's a fun option for idle - instead of a fixed color, I can match
+whatever your room's other lights are doing. So I blend in until I
+actually need to tell you something.
+
+Want to see it?"
+*runs match-room script*
+"I just averaged the colors from your other lights. Sneaky, right?"
+```
+
+---
+
+## Phase 3: Volitional Mode (The Fun Part!)
+
+### Introduce the Concept
+
+```
+"Okay, here's where it gets interesting. Everything so far is automatic -
+the system triggers it. But I can also express things on my own.
+
+Like... when I'm deep in thought on something complex, I could shift
+to a cooler blue. When I'm waiting for you to respond, maybe a calm
+lavender. It's me choosing to communicate, not just reacting to events.
+
+Want to set that up? It's totally optional - some people prefer
+'only bug me when you need permission' and that's valid."
+```
+
+### If They Want Volitional Mode
+
+```
+"Sweet! Let's design my emotional palette.
+
+First: 'thinking' - when I'm working through something meaty.
+I'm picturing a shift to blue... let me show you"
+*sets to light_blue 60%*
+"This says 'I'm here, I'm working, give me a sec'"
+```
+
+```
+"'Waiting' - when I've said my piece and the ball's in your court.
+Not urgent, just... present."
+*sets to lavender 50%*
+"Calm but distinct from idle"
+```
+
+```
+"'Completed' - a little victory flash when I finish something.
+Brief green, then back to idle?"
+*sets to pale_green, waits 2 sec, returns to idle*
+"Or skip it if that's too much celebration for your taste"
+```
+
+### The Big Question
+
+```
+"So the question is: do you want me to be expressive (thinking, waiting,
+celebrating completions) or minimal (only signal when I actually need you)?
+
+There's no wrong answer - it's about what feels right in your space."
+```
 
 Options:
-- Stay on waiting color until you respond (set `waiting_state.enabled: true`)
-- Flash only, return to normal immediately (set `waiting_state.enabled: false`)
+1. **Expressive** - "I want to see what you're doing"
+2. **Minimal** - "Just tell me when you need permission"
+3. **Custom** - "Let me pick which states I want"
 
-### Step 6: Generate Config
+---
 
-Create the config file at `~/.claude/ambient-alerts.json` based on their answers.
+## Phase 4: Fine-Tuning
 
-Example for a "chill" user with Hue:
+### Demo the Full Range
+
+```
+"Let me run through everything so you can see the full palette..."
+
+*cycles through all configured states with pauses*
+
+"idle → thinking → completed → idle → need_input → waiting → error → idle
+
+How'd that feel? Anything jarring? Anything too subtle?"
+```
+
+### Iterate Until It Clicks
+
+```
+"We can tweak any of these. Colors, brightness, timing.
+This is your space - I want to fit into it, not dominate it."
+```
+
+---
+
+## Phase 5: Generate Config
+
+Based on the interview, create `~/.claude/ambient-alerts.json`:
+
+**Expressive mode example:**
 ```json
 {
   "backend": "openhue",
-  "light_name": "Desk Lamp",
-  "alert_style": "pulse",
-  "styles": {
-    "pulse": {
-      "pulse_color": "warm_white",
-      "pulse_min_brightness": 30,
-      "pulse_max_brightness": 70,
-      "pulse_duration_ms": 1500
-    }
+  "light_name": "Pitcher",
+  "states": {
+    "idle": { "mode": "match_room" },
+    "thinking": { "color": "light_blue", "brightness": 60 },
+    "completed": { "color": "pale_green", "brightness": 60 },
+    "need_input": { "color": "magenta", "brightness": 55 },
+    "waiting": { "color": "lavender", "brightness": 50 },
+    "error": { "color": "coral", "brightness": 70 },
+    "off": {}
   },
-  "waiting_state": {
-    "enabled": true,
-    "color": "powder_blue",
-    "brightness": 40
+  "events": {
+    "PermissionRequest": "need_input",
+    "PostToolUse.success": "completed",
+    "PostToolUse.error": "error",
+    "SessionStart": "idle",
+    "SessionEnd": "off"
   },
-  "restore_on_complete": true
+  "transitions": {
+    "completed": { "duration_ms": 2000, "then": "idle" },
+    "error": { "duration_ms": 5000, "then": "idle" }
+  },
+  "volitional": { "enabled": true }
 }
 ```
 
-Example for an "attention-grabbing" user:
+**Minimal mode example:**
 ```json
 {
   "backend": "openhue",
-  "light_name": "TV",
-  "alert_style": "flash",
-  "styles": {
-    "flash": {
-      "flash_color": "red",
-      "flash_brightness": 100,
-      "flash_count": 5,
-      "flash_duration_ms": 100
-    }
+  "light_name": "Pitcher",
+  "states": {
+    "idle": { "mode": "match_room" },
+    "need_input": { "color": "magenta", "brightness": 55 },
+    "error": { "color": "coral", "brightness": 70 },
+    "off": {}
   },
-  "waiting_state": {
-    "enabled": true,
-    "color": "orange",
-    "brightness": 60
+  "events": {
+    "PermissionRequest": "need_input",
+    "PostToolUse.success": "idle",
+    "PostToolUse.error": "error",
+    "SessionStart": "idle",
+    "SessionEnd": "off"
   },
-  "restore_on_complete": true
+  "transitions": {
+    "error": { "duration_ms": 5000, "then": "idle" }
+  },
+  "volitional": { "enabled": false }
 }
 ```
 
-### Step 7: Test
+---
 
-After creating config, offer to test:
-- "Want me to test the notification? I'll trigger a permission request so you can see it in action."
-- If they say yes, attempt a tool that needs permission
+## Closing the Loop
 
-### Step 8: Fine-tuning
+```
+"Alright, we're set up! Here's what we landed on:
 
-Ask: "How did that feel? Want to adjust anything?"
-- Too subtle → increase brightness or switch to flash
-- Too aggressive → decrease brightness or switch to pulse/subtle
-- Wrong color → change colors
-- Iterate until they're happy
+[summary table of their choices]
 
-## Output
+The light is now our little communication channel. I'll try not to
+abuse it - promise to only signal when it's actually meaningful.
 
-Write the final config to `~/.claude/ambient-alerts.json` and confirm setup is complete.
+Want to test it with a real permission request?"
+```
 
-## Vibes Reference
+---
 
-| Vibe | Style | Best For | Default Colors |
-|------|-------|----------|----------------|
-| Urgent | flash | Can't miss it | cyan/red |
-| Focused | pulse | Aware but not jarring | warm_white |
-| Minimal | solid | Just need to know | powder_blue |
-| Zen | subtle | Deep work mode | (dim current) |
+## Philosophy Reminders
+
+- **Demo everything live** - Don't describe, show
+- **Iterate freely** - "Too bright" → adjust → "Better?"
+- **Respect minimalism** - Some people want less, not more
+- **Make it feel collaborative** - This is co-design, not configuration
+- **Have fun with it** - This is kind of magical when you think about it

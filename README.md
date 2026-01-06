@@ -1,30 +1,92 @@
 # ambient-alerts
 
-A Claude Code plugin that uses your smart lights for ambient notifications. Get visual feedback when Claude needs your attention - customized to your vibe.
+A Claude Code plugin for ambient light communication. Express states, respond to events, and build a shared visual language between you and Claude through smart lights.
 
 ## Features
 
-- **Multiple alert styles** - flash, pulse, breathe, solid, or subtle
-- **Vibe-based setup** - tell Claude what you want and it configures for you
+- **State-based communication** - Define what each state looks like (idle, thinking, completed, etc.)
+- **Automatic events** - Lights respond to permission requests, tool completion, errors
+- **Volitional control** - Claude can express states based on context and judgment
+- **Interview-based setup** - Collaboratively design your light language through conversation
+- **Transitions** - States can auto-transition (e.g., "completed" fades to "idle")
 - **Works with any smart light** - Philips Hue (via OpenHue) or custom commands
-- **Session-isolated** - multiple Claude sessions don't interfere
-- **Fully customizable** - colors, brightness, timing, everything
 
-## Alert Styles
+## Quick Start
 
-| Style | Vibe | Best For |
-|-------|------|----------|
-| ⚡ **Flash** | Urgent, can't miss it | Important permission requests |
-| 🌊 **Pulse** | Calm awareness | Subtle but noticeable |
-| 🫁 **Breathe** | Keep the vibe | Non-disruptive, uses current color |
-| 💡 **Solid** | Minimal | Just a color change |
-| 🌙 **Subtle** | Zen mode | Deep focus, peripheral only |
+```bash
+# Install the plugin
+claude plugins install ambient-alerts@aparente
+
+# Run interactive setup
+# Just ask Claude: "Set up ambient alerts for my lights"
+```
+
+## How It Works
+
+### States
+
+Define what each state looks like in your config:
+
+```json
+{
+  "states": {
+    "idle": { "color": "antique_white", "brightness": 40 },
+    "thinking": { "color": "light_blue", "brightness": 60 },
+    "completed": { "color": "pale_green", "brightness": 60 },
+    "need_input": { "color": "gold", "brightness": 75 },
+    "waiting": { "color": "lavender", "brightness": 50 },
+    "error": { "color": "coral", "brightness": 70 }
+  }
+}
+```
+
+### Automatic Events
+
+Map system events to states:
+
+```json
+{
+  "events": {
+    "PermissionRequest": "need_input",
+    "PostToolUse.success": "completed",
+    "PostToolUse.error": "error",
+    "SessionStart": "idle",
+    "SessionEnd": "off"
+  }
+}
+```
+
+### Transitions
+
+Define auto-transitions between states:
+
+```json
+{
+  "transitions": {
+    "completed": {
+      "duration_ms": 2000,
+      "then": "idle"
+    }
+  }
+}
+```
+
+### Volitional Control
+
+Claude can set states directly when appropriate:
+
+```json
+{
+  "volitional": {
+    "enabled": true
+  }
+}
+```
 
 ## Installation
 
 ```bash
-/plugin marketplace add aparente/ambient-alerts
-/plugin install ambient-alerts@aparente
+claude plugins install ambient-alerts@aparente
 ```
 
 ## Setup
@@ -36,125 +98,108 @@ Just ask Claude:
 Set up ambient alerts for my lights
 ```
 
-Claude will interview you about:
-1. What smart light system you use
-2. Which light to use for notifications
-3. What vibe you're going for
-4. Color and brightness preferences
-5. Test and fine-tune until it feels right
+Claude will guide you through:
+1. Selecting your smart light system
+2. Choosing which light to use
+3. **Interview 1: Automatic Events** - What should happen on permission requests, completions, errors?
+4. **Interview 2: Volitional Presence** - How should Claude express thinking, waiting, idle states?
+5. Testing and fine-tuning until it feels right
 
 ### Manual Setup
 
 Create `~/.claude/ambient-alerts.json`:
 
-**Flash style (attention-grabbing):**
 ```json
 {
   "backend": "openhue",
-  "light_name": "TV",
-  "alert_style": "flash",
-  "styles": {
-    "flash": {
-      "flash_color": "cyan",
-      "flash_brightness": 100,
-      "flash_count": 3,
-      "flash_duration_ms": 120
+  "light_name": "Pitcher",
+
+  "states": {
+    "idle": {
+      "color": "antique_white",
+      "brightness": 40,
+      "description": "I'm here, all is well"
+    },
+    "thinking": {
+      "color": "light_blue",
+      "brightness": 60,
+      "description": "Working on something"
+    },
+    "completed": {
+      "color": "pale_green",
+      "brightness": 60,
+      "description": "Done!"
+    },
+    "need_input": {
+      "color": "gold",
+      "brightness": 75,
+      "description": "When you have a moment..."
+    },
+    "waiting": {
+      "color": "lavender",
+      "brightness": 50,
+      "description": "Ball's in your court, no rush"
+    },
+    "error": {
+      "color": "coral",
+      "brightness": 70,
+      "description": "Something needs attention"
+    },
+    "off": {
+      "description": "Light off"
     }
   },
-  "waiting_state": {
-    "enabled": true,
-    "color": "powder_blue",
-    "brightness": 50
+
+  "events": {
+    "PermissionRequest": "need_input",
+    "PostToolUse.success": "completed",
+    "PostToolUse.error": "error",
+    "SessionStart": "idle",
+    "SessionEnd": "off"
   },
-  "restore_on_complete": true
+
+  "transitions": {
+    "completed": {
+      "duration_ms": 2000,
+      "then": "idle"
+    }
+  },
+
+  "volitional": {
+    "enabled": true
+  }
 }
 ```
 
-**Pulse style (calm):**
-```json
-{
-  "backend": "openhue",
-  "light_name": "Desk Lamp",
-  "alert_style": "pulse",
-  "styles": {
-    "pulse": {
-      "pulse_color": "warm_white",
-      "pulse_min_brightness": 20,
-      "pulse_max_brightness": 80,
-      "pulse_duration_ms": 1000
-    }
-  },
-  "waiting_state": {
-    "enabled": true,
-    "color": "soft_pink",
-    "brightness": 40
-  },
-  "restore_on_complete": true
-}
+## Direct State Control
+
+Set states directly via the script:
+
+```bash
+# Set to thinking state
+~/.claude/plugins/cache/aparente/ambient-alerts/1.0.0/scripts/set-state.sh thinking
+
+# Set to idle
+~/.claude/plugins/cache/aparente/ambient-alerts/1.0.0/scripts/set-state.sh idle
+
+# Turn off
+~/.claude/plugins/cache/aparente/ambient-alerts/1.0.0/scripts/set-state.sh off
 ```
 
-**Breathe style (non-disruptive):**
-```json
-{
-  "backend": "openhue",
-  "light_name": "TV",
-  "alert_style": "breathe",
-  "styles": {
-    "breathe": {
-      "use_current_color": true,
-      "min_brightness": 30,
-      "max_brightness": 90,
-      "breath_duration_ms": 800,
-      "breath_count": 3
-    }
-  },
-  "waiting_state": {
-    "enabled": false
-  },
-  "restore_on_complete": true
-}
-```
-
-**Subtle style (minimal):**
-```json
-{
-  "backend": "openhue",
-  "light_name": "Office Light",
-  "alert_style": "subtle",
-  "styles": {
-    "subtle": {
-      "dim_percent": 20
-    }
-  },
-  "waiting_state": {
-    "enabled": false
-  },
-  "restore_on_complete": true
-}
-```
-
-## Custom Commands Backend
+## Custom Backend
 
 For non-Hue systems (LIFX, Govee, Home Assistant, etc.):
 
 ```json
 {
   "backend": "custom",
-  "save_state_command": "hass-cli light get office --json",
-  "alert_command": "hass-cli light flash office --color red",
-  "waiting_command": "hass-cli light set office --color blue",
-  "restore_command": "hass-cli light restore office",
-  "waiting_state": {
-    "enabled": true
-  },
-  "restore_on_complete": true
+  "custom_commands": {
+    "set": "hass-cli light set office --color {color} --brightness {brightness}",
+    "idle": "hass-cli light set office --color white --brightness 40",
+    "thinking": "hass-cli light set office --color blue --brightness 60"
+  }
 }
 ```
-
-## How It Works
-
-1. **PermissionRequest** → Saves light state, runs alert animation, optionally stays on waiting color
-2. **PostToolUse** → Restores light to original state
 
 ## Configuration Reference
 
@@ -162,54 +207,47 @@ For non-Hue systems (LIFX, Govee, Home Assistant, etc.):
 |--------|------|-------------|
 | `backend` | string | `"openhue"` or `"custom"` |
 | `light_name` | string | Name of your light (OpenHue) |
-| `alert_style` | string | `"flash"`, `"pulse"`, `"breathe"`, `"solid"`, `"subtle"` |
-| `waiting_state.enabled` | boolean | Stay on waiting color until complete |
-| `waiting_state.color` | string | Color while waiting |
-| `waiting_state.brightness` | number | Brightness while waiting (0-100) |
-| `restore_on_complete` | boolean | Restore to original after tool completes |
+| `states` | object | State definitions with color/brightness |
+| `events` | object | Event → state mappings |
+| `transitions` | object | Auto-transition rules |
+| `volitional.enabled` | boolean | Allow Claude to set states directly |
 
-### Flash Style Options
-| Option | Default | Description |
-|--------|---------|-------------|
-| `flash_color` | `"cyan"` | Color of the flash |
-| `flash_brightness` | `100` | Flash brightness (0-100) |
-| `flash_count` | `3` | Number of flashes |
-| `flash_duration_ms` | `120` | Duration of each flash |
+### State Options
 
-### Pulse Style Options
-| Option | Default | Description |
-|--------|---------|-------------|
-| `pulse_color` | `"warm_white"` | Pulse color |
-| `pulse_min_brightness` | `20` | Minimum brightness |
-| `pulse_max_brightness` | `80` | Maximum brightness |
-| `pulse_duration_ms` | `1000` | Duration of each pulse |
+| Option | Type | Description |
+|--------|------|-------------|
+| `color` | string | OpenHue color name |
+| `brightness` | number | Brightness 0-100 |
+| `description` | string | Human-readable description |
 
-### Solid Style Options
-| Option | Default | Description |
-|--------|---------|-------------|
-| `solid_color` | `"powder_blue"` | Color to change to |
-| `solid_brightness` | `60` | Brightness |
+### Transition Options
 
-### Breathe Style Options
-| Option | Default | Description |
-|--------|---------|-------------|
-| `use_current_color` | `true` | Keep the light's current color |
-| `min_brightness` | `30` | Minimum brightness during breath |
-| `max_brightness` | `90` | Maximum brightness during breath |
-| `breath_duration_ms` | `800` | Duration of each breath phase |
-| `breath_count` | `3` | Number of breath cycles |
+| Option | Type | Description |
+|--------|------|-------------|
+| `duration_ms` | number | How long to stay in state |
+| `then` | string | State to transition to |
 
-### Subtle Style Options
-| Option | Default | Description |
-|--------|---------|-------------|
-| `dim_percent` | `20` | How much to dim (%) |
+## Philosophy
+
+This plugin is about **ambient, low-stress communication**. The goal is:
+
+- Peripheral awareness, not interruption
+- Meaningful states that convey real information
+- A shared visual language you design together
+- Gentle transitions, not jarring alerts
+
+The setup interview process is collaborative - you and Claude co-create the communication system that works for your workflow.
+
+## Legacy Support
+
+Old-style configs (with `alert_style`, `waiting_state`, etc.) continue to work. The plugin automatically detects which system to use based on whether `states` is defined.
 
 ## Requirements
 
 - Claude Code CLI
 - **OpenHue backend**: [OpenHue CLI](https://www.openhue.io/cli/openhue-cli) installed and configured
 - **Custom backend**: Your preferred smart home CLI
-- `jq` and `bc` command-line tools
+- `jq` command-line tool
 
 ## License
 
