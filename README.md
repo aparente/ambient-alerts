@@ -5,6 +5,7 @@ A Claude Code plugin for ambient light communication. Express states, respond to
 ## Features
 
 - **State-based communication** - Define what each state looks like (idle, thinking, completed, etc.)
+- **Gentle animations** - Smooth color oscillations with configurable speed and range
 - **Automatic events** - Lights respond to permission requests, tool completion, errors
 - **Volitional control** - Claude can express states based on context and judgment
 - **Interview-based setup** - Collaboratively design your light language through conversation
@@ -223,9 +224,64 @@ For non-Hue systems (LIFX, Govee, Home Assistant, etc.):
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `color` | string | OpenHue color name |
+| `mode` | string | `"fixed"` (default), `"animate"`, `"temperature"`, or `"match_room"` |
+| `color` | string | OpenHue color name (for fixed mode) |
 | `brightness` | number | Brightness 0-100 |
+| `temperature` | number | Color temperature in mirek, 153-500 (for temperature mode) |
+| `animation` | object | Animation settings (for animate mode) |
 | `description` | string | Human-readable description |
+
+### State Modes
+
+**Fixed mode** (default) - Static color:
+```json
+"completed": {
+  "color": "gold",
+  "brightness": 75
+}
+```
+
+**Animate mode** - Gentle color oscillation with clean background process management:
+```json
+"thinking": {
+  "mode": "animate",
+  "animation": {
+    "start_color": "#008B8B",
+    "end_color": "#4169E1",
+    "steps": 40,
+    "step_ms": 1000,
+    "brightness": 60
+  }
+}
+```
+
+This creates a smooth ping-pong animation between two colors:
+- `start_color` / `end_color`: RGB hex colors to oscillate between
+- `steps`: Number of interpolation steps (40 = 40 seconds per cycle)
+- `step_ms`: Milliseconds per step (1000 = 1 second)
+- Animations run in background with PID tracking and are cleanly terminated on state change
+
+**Temperature mode** - Color temperature (great for presets like Hue "Read"):
+```json
+"idle": {
+  "mode": "temperature",
+  "temperature": 346,
+  "brightness": 100
+}
+```
+
+Common temperature values (mirek):
+- 153 = Cool daylight (~6500K)
+- 250 = Neutral white (~4000K)
+- 346 = Warm white / "Read" preset (~2900K)
+- 500 = Candlelight (~2000K)
+
+**Match room mode** - Match the average color of other lights in the room:
+```json
+"idle": {
+  "mode": "match_room"
+}
+```
 
 ### Transition Options
 
