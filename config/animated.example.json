@@ -1,0 +1,91 @@
+{
+  "backend": "openhue",
+  "light_name": "Your Light Name",
+
+  "states": {
+    "idle": {
+      "mode": "temperature",
+      "temperature": 346,
+      "brightness": 100,
+      "description": "Hue Read preset - warm white"
+    },
+    "thinking": {
+      "mode": "animate",
+      "animation": {
+        "start_color": "#008B8B",
+        "end_color": "#4169E1",
+        "steps": 40,
+        "step_ms": 1000,
+        "brightness": 60
+      },
+      "description": "Gentle blue/teal oscillation - working"
+    },
+    "completed": {
+      "color": "gold",
+      "brightness": 75,
+      "description": "Golden success flash"
+    },
+    "need_input": {
+      "mode": "animate",
+      "animation": {
+        "start_color": "#CD5C5C",
+        "end_color": "#B22222",
+        "steps": 35,
+        "step_ms": 1000,
+        "brightness": 65
+      },
+      "description": "Gentle reddish pulse - needs attention"
+    },
+    "waiting": {
+      "mode": "animate",
+      "animation": {
+        "start_color": "#DC143C",
+        "end_color": "#8B0000",
+        "steps": 40,
+        "step_ms": 1000,
+        "brightness": 55
+      },
+      "description": "Gentle reddish hues - waiting for you"
+    },
+    "error": {
+      "color": "coral",
+      "brightness": 70,
+      "description": "Something went wrong"
+    },
+    "connected": {
+      "color": "green",
+      "brightness": 100,
+      "description": "Just connected"
+    },
+    "off": {
+      "description": "Light off"
+    }
+  },
+
+  "events": {
+    "PermissionRequest": "need_input",
+    "PostToolUse.success": "completed",
+    "PostToolUse.error": "error",
+    "SessionStart": "connected",
+    "SessionEnd": "off"
+  },
+
+  "transitions": {
+    "completed": {
+      "duration_ms": 2500,
+      "then": "idle"
+    },
+    "connected": {
+      "duration_ms": 1500,
+      "then": "idle"
+    },
+    "error": {
+      "duration_ms": 4000,
+      "then": "idle"
+    }
+  },
+
+  "volitional": {
+    "enabled": true
+  }
+}

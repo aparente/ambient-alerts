@@ -1,7 +1,7 @@
 {
   "name": "ambient-alerts",
-  "version": "1.0.0",
-  "description": "Flash smart lights on permission requests, restore when complete. Works with Philips Hue (via OpenHue) or any system via custom commands.",
+  "version": "1.1.0",
+  "description": "Ambient light communication for Claude Code. Supports static colors, gentle animations, and color temperature modes. Works with Philips Hue (via OpenHue) or any smart light system.",
   "author": {
     "name": "aparente"
   },
